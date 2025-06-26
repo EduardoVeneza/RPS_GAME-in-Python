@@ -34,7 +34,6 @@ class Game:
 # Holds the game server
 class Game_Server:
     def __init__(self, host = 'localhost', port = 5555) -> None:
-        self.game = Game()
         self.host = host
         self.port = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -79,10 +78,9 @@ class Game_Server:
                 player.send_to_player("Jogo pronto!")
                 break
 
-        player.send_to_player(self.game.get_menu())
+        player.send_to_player(Game.get_menu())
+        player_choice = player.receive_from_player()
         
-        
-            
 
 
 
