@@ -38,6 +38,8 @@ class Game_Server:
         self.port = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.players: list[Player] = []  # Lista de jogadores conectados
+        self.name_choice_dict = {}
+        self.who_win = {}
 
     def start_server(self) -> None:
         self.server.bind((self.host, self.port))    
@@ -45,7 +47,6 @@ class Game_Server:
         print(f'Servidor Iniciado em ({self.host}, {self.port})')
 
         while True:
-            player = Player() # Jogador temporário para receber o socket OBJ e ip
             conn, addr = self.server.accept()
             if len(self.player) >= 2:
                 conn.send(b'SERVER_FULL') # This is going to be the key string to stop the client
@@ -54,11 +55,10 @@ class Game_Server:
             # Catch de nickname
             print(f'{addr} se conectou no jogo!')
             conn.send(b'Digite seu nick: ')
+            # Player is going to send the nickname from client
             name = conn.recv(1024).decode()
 
-            # Recebendo informações do jogador
-            player.addr = addr
-            player.conn = conn
+            player = Player(conn, addr) # Jogador temporário para receber o socket OBJ e ip
             player.name = name
 
             # Adicionando jogador a lista de jogadores
@@ -79,10 +79,37 @@ class Game_Server:
                 break
 
         player.send_to_player(Game.get_menu())
-        player_choice = player.receive_from_player()
+        # Player.choice is going to be updated, because player is going to make a choice
+        player.choice = player.receive_from_player()
+        self.name_choice_dict[player.name] = player.choice
+
+        # Wait until other player send their choice
+        while self.name_choice_dict.__len__() < 2:
+            continue
         
+        # Here we got, 2 players, with 2 choices each, then we compare those choices
+
+        # First we print the choose values for the server, just for logging
+        choices = f'''
+        {player.name} -> {self.name_choice_dict.get(player.name)}\n
+        '''
+        print(choices)
+        player.send_to_player(choices)
+        # Client is going to receive choice and print to the client
+        if self.players[0].name == player.name:
+            self.who_win = compare_choices(self.players[0], self.players[1], Game)
 
 
+def compare_choices(player1: Player, player2: Player, game: Game) -> dict:
+    rock_value = game.RPS.ROCK.value
+    paper_value = game.RPS.PAPER.value
+    scissors_value = game.RPS.SCISSORS.value
+    
+    player1_wins = (player1.choice == rock_value and player2.choice == scissors_value) or (player1.choice == paper_value and player2.choice == rock_value) or (player1.choice == scissors_value and player2.choice == paper_value)
+    if player1_wins:
+        return {player1.name : True, player2.name : False}
+    else: 
+        return {player1.name : False, player2.name : True}
 
 # Função que descobre o IPV4
 def get_local_ipv4():
