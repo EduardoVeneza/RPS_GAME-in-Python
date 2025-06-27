@@ -22,6 +22,7 @@ class RPS(Enum):
     PAPER = 2
     SCISSORS = 3
 
+
 def game() -> bool:
     os.system("clear")
     show_menu()
