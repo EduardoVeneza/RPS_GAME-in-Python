@@ -14,6 +14,9 @@ class Game:
     def __init__(self):
         pass
     
+    def get_RPS_Values(self) -> tuple:
+        return (self.RPS.ROCK.value, self.RPS.PAPER.value, self.RPS.SCISSORS.value)
+    
     def get_menu(self) -> str: 
         menu = f'''
         /-/-/-/-/-/ ROCK PAPER SCISSOR /-/-/-/-/-/
@@ -75,11 +78,12 @@ class Game_Server:
             if len(self.players == 1):
                 continue
             else:
-                player.send_to_player("Jogo pronto!")
+                player.send_to_player("Jogo pronto! Outro jogador se conectou!")
                 break
 
         player.send_to_player(Game.get_menu())
         # Player.choice is going to be updated, because player is going to make a choice
+        # Then the choice is going to be stored in .choice, and the name and the choice in a dict
         player.choice = player.receive_from_player()
         self.name_choice_dict[player.name] = player.choice
 
@@ -95,21 +99,26 @@ class Game_Server:
         '''
         print(choices)
         player.send_to_player(choices)
+
         # Client is going to receive choice and print to the client
-        if self.players[0].name == player.name:
+        if self.players[0].name == player.name: # This guarantees that the "Compare_choices" only runs once
             self.who_win = compare_choices(self.players[0], self.players[1], Game)
+        
+        if self.who_win[player.name]:
+            player.send_to_player("Congrats! You Win 🥳")
+        else:
+            player.send_to_player("You lost! 😓")
 
 
 def compare_choices(player1: Player, player2: Player, game: Game) -> dict:
-    rock_value = game.RPS.ROCK.value
-    paper_value = game.RPS.PAPER.value
-    scissors_value = game.RPS.SCISSORS.value
+    rock_value, paper_value, scissors_value = game.get_RPS_Values()
     
     player1_wins = (player1.choice == rock_value and player2.choice == scissors_value) or (player1.choice == paper_value and player2.choice == rock_value) or (player1.choice == scissors_value and player2.choice == paper_value)
     if player1_wins:
         return {player1.name : True, player2.name : False}
     else: 
         return {player1.name : False, player2.name : True}
+
 
 # Função que descobre o IPV4
 def get_local_ipv4():
