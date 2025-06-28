@@ -11,4 +11,9 @@ class Player:
         self.conn.send(message.encode())
 
     def receive_from_player(self):
-        return self.conn.recv(1024).decode()
+        data = self.conn.recv(1024).decode()
+        return data
+    
+    def exit(self):
+        self.conn.close()
+        exit(1)

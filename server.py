@@ -17,7 +17,7 @@ class Game:
     def get_RPS_Values(self) -> tuple:
         return (self.RPS.ROCK.value, self.RPS.PAPER.value, self.RPS.SCISSORS.value)
     
-    def get_menu(self) -> str: 
+    def get_menu() -> str: 
         menu = f'''
         /-/-/-/-/-/ ROCK PAPER SCISSOR /-/-/-/-/-/
         Please, enter the respective number:
@@ -51,7 +51,7 @@ class Game_Server:
 
         while True:
             conn, addr = self.server.accept()
-            if len(self.player) >= 2:
+            if len(self.players) >= 2:
                 conn.send(b'SERVER_FULL') # This is going to be the key string to stop the client
                 continue
             
@@ -70,38 +70,45 @@ class Game_Server:
             # Dando boas vindas
             conn.send(f"Olá! {player.name}, obrigado por se conectar ao RPS_GAME!".encode())
 
-            thread = threading.Thread(target=self.handle_player, args=(player))
+            thread = threading.Thread(target=self.handle_player, args=(player,))
             thread.start()
 
     def handle_player(self, player: Player):
         while True:
-            if len(self.players == 1):
+            if len(self.players) == 1:
                 continue
             else:
                 player.send_to_player("Jogo pronto! Outro jogador se conectou!")
                 break
 
         player.send_to_player(Game.get_menu())
-        # Player.choice is going to be updated, because player is going to make a choice
-        # Then the choice is going to be stored in .choice, and the name and the choice in a dict
-        player.choice = player.receive_from_player()
+        try:
+            player.choice = int(player.conn.recv(1024).decode())
+        except (ConnectionResetError, ValueError):
+            print(f"Jogador {player.name} desconectou ou enviou valor inválido.")
+            # for p in self.players:
+            #     if p.name == player.name:
+            #         self.players.remove(p)
+            player.exit()
+            return
+
+        if player.choice not in [rps.value for rps in Game.RPS]:
+            player.exit()
+            return
+        
         self.name_choice_dict[player.name] = player.choice
 
-        # Wait until other player send their choice
         while self.name_choice_dict.__len__() < 2:
             continue
         
-        # Here we got, 2 players, with 2 choices each, then we compare those choices
-
-        # First we print the choose values for the server, just for logging
         choices = f'''
-        {player.name} -> {self.name_choice_dict.get(player.name)}\n
+        {self.players[0].name} -> {self.name_choice_dict.get(self.players[0].name)}\n
+        {self.players[1].name} -> {self.name_choice_dict.get(self.players[1].name)}\n
         '''
         print(choices)
         player.send_to_player(choices)
 
-        # Client is going to receive choice and print to the client
-        if self.players[0].name == player.name: # This guarantees that the "Compare_choices" only runs once
+        if self.players[0].name == player.name:
             self.who_win = compare_choices(self.players[0], self.players[1], Game)
         
         if self.who_win[player.name]:
